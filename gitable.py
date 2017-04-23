@@ -138,11 +138,4 @@ def launchDump():
           for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone])
     
     
-launchDump()
-
-
-
-
-  
-   
- 
+launchDump() 
