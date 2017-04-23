@@ -33,6 +33,7 @@ import json
 import re,datetime
 import sys
 import csv
+import random
  
 class L():
   "Anonymous container"
@@ -54,9 +55,23 @@ def secs(d0):
   epoch = datetime.datetime.utcfromtimestamp(0)
   delta = d - epoch
   return delta.total_seconds()
+  
+def anonymize_user(user_dict, user):
+  if user_dict.get(user,None) == None:
+    count = len(user_dict)
+    user_dict[user] = 'user'+ str(count)
+  return user_dict[user] 
+  
+def anonymize_teams(team_dict, team):
+  if team_dict.get(team,None) == None:
+    count = len(team_dict)
+    team_dict[team] = 'team'+ str(count)
+  return team_dict[team]
+	
  
 def dump1(u,issues):
-  token = "INSERT_TOKEN_HERE" # <===
+  token = "Insert Token Here" # <===
+  user_dict = {}
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
   v = urllib.request.urlopen(request).read()
   w = json.loads(v)
@@ -68,7 +83,7 @@ def dump1(u,issues):
     action = event['event']
     label_name = 'no label'
     if event.get('label'): label_name = event['label']['name']
-    user = event['actor']['login']
+    user = anonymize_user(user_dict, event['actor']['login'])
     milestone = event['issue']['milestone']
     if milestone != None : milestone = milestone['title']
     eventObj = L(when=created_at,
@@ -91,20 +106,37 @@ def dump(u,issues):
     return False
 
 def launchDump():
-  page = 1
-  issues = dict()
-  while(True):
-    doNext = dump('https://api.github.com/repos/SidHeg/se17-teamD/issues/events?page=' + str(page), issues)
-    print("page "+ str(page))
-    page += 1
-    if not doNext : break
+  team_id = 0
+  team_list = ['SE17GroupH/Zap', 
+			'syazdan25/SE17-Project',
+			'rnambis/SE17-group-O', 
+			'harshalgala/se17-Q', 
+			'zsthampi/SE17-Group-N', 
+			'karanjadhav2508/kqsse17',
+			'Rushi-Bhatt/SE17-Team-K',
+			'genterist/whiteWolf', 
+			'SidHeg/se17-teamD', 
+			'NCSU-SE-Spring-17/SE-17-S'
+			]
+  random.shuffle(team_list)
+  for teamrepo in team_list:
+    team_id = team_id + 1
+    issues = dict()
+    page = 1
+    while(True):
+      print('https://api.github.com/repos/'+teamrepo+'/issues/events?page=' + str(page))
+      doNext = dump('https://api.github.com/repos/'+teamrepo+'/issues/events?page=' + str(page), issues)
+      print("page "+ str(page))
+      page += 1
+      if not doNext : break
 	
-  with open('data.csv', 'w') as file: 
-    w = csv.writer(file)
-    w.writerow(["issue_id", "when", "action", "what", "user", "milestone"])
-    for issue in sorted(issues.keys()):
-        events = issues[issue]
-        for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone])
+    with open('team'+str(team_id)+'.csv', 'w') as file: 
+      w = csv.writer(file)
+      w.writerow(["issue_id", "when", "action", "what", "user", "milestone"])
+      for issue in sorted(issues.keys()):
+          events = issues[issue]
+          for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone])
+    
     
 launchDump()
 
