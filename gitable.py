@@ -104,6 +104,44 @@ def dump(u,issues):
     print(e)
     print("Contact TA")
     return False
+	
+def dumpMilestone(reponame, milestone_dict):
+  page = 1
+  while(True):
+    url = 'https://api.github.com/repos/'+reponame+'/milestones/' + str(page)
+    print ("milestone page:"+url)
+    doNext = dumpMilestone1(url, milestone_dict)
+    page += 1
+    if not doNext : break
+
+def dumpMilestone1(u,milestones):
+  try:
+    return dumpMilestone2(u, milestones)
+  except urllib.request.HTTPError as e:
+    if e.code == 404:
+    return False
+	
+	
+def dumpMilestone2(u, milestones):
+  # Source refered - https://github.com/CSC510-2015-Axitron/project2/blob/master/gitable-sql.py
+  token = "Insert Token Here"
+  request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
+  v = urllib.request.urlopen(request).read()
+  milestone = json.loads(v)
+  if not milestone or ('message' in milestone and milestone['message'] == "Not Found"): return False
+  id = milestone['id']
+  title = milestone['title']
+  created_at = secs(milestone['created_at'])
+  due_at = secs(milestone['due_on']) if milestone['due_on'] != None  else 0
+  closed_at = secs(milestone['closed_at']) if milestone['closed_at'] != None else 0
+    
+  milestoneObj = L(id=id,
+               title = title,
+               created_at=created_at,
+               due_at = due_at,
+               closed_at = closed_at)
+  milestones[id] = milestoneObj
+  return True
 
 def launchDump():
   team_id = 0
@@ -122,20 +160,33 @@ def launchDump():
   for teamrepo in team_list:
     team_id = team_id + 1
     issues = dict()
+    milestone_dict = dict()
     page = 1
     while(True):
-      print('https://api.github.com/repos/'+teamrepo+'/issues/events?page=' + str(page))
       doNext = dump('https://api.github.com/repos/'+teamrepo+'/issues/events?page=' + str(page), issues)
-      print("page "+ str(page))
       page += 1
       if not doNext : break
 	
     with open('team'+str(team_id)+'.csv', 'w') as file: 
       w = csv.writer(file)
-      w.writerow(["issue_id", "when", "action", "what", "user", "milestone"])
+      w.writerow(["issue_id", "when", "action", "what", "user", "milestone", "Due"])
       for issue in sorted(issues.keys()):
           events = issues[issue]
           for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone])
-    
-    
-launchDump() 
+    dumpMilestone(teamrepo,milestone_dict)
+	
+    with open('milestone'+str(team_id)+'.csv', 'w') as file: 
+      w = csv.writer(file)
+      w.writerow(["milestone_id", "milestone_title", "created_at", "due_at", "closed_at"])
+      for key in milestone_dict.keys():
+        milestone = milestone_dict[key]
+        w.writerow([milestone.id, milestone.title, milestone.created_at, milestone.due_at, milestone.closed_at])
+	
+launchDump()
+
+
+
+
+  
+   
+ 
