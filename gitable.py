@@ -70,7 +70,7 @@ def anonymize_teams(team_dict, team):
 	
  
 def dump1(u,issues):
-  token = "3396ba7869f46704c99aba81d04726fdee53127b"
+  token = "Insert Token Here"
   user_dict = {}
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
   v = urllib.request.urlopen(request).read()
@@ -124,7 +124,7 @@ def dumpMilestone1(u,milestones):
 	
 def dumpMilestone2(u, milestones):
   # Source refered - https://github.com/CSC510-2015-Axitron/project2/blob/master/gitable-sql.py
-  token = "3396ba7869f46704c99aba81d04726fdee53127b"
+  token = "Insert Token Here"
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
   v = urllib.request.urlopen(request).read()
   milestone = json.loads(v)
@@ -207,7 +207,7 @@ def launchDump():
 
     page = 1
     comments = []
-    token = "3396ba7869f46704c99aba81d04726fdee53127b"
+    token = "Insert Token Here"
     while(True):
       comments_url = 'https://api.github.com/repos/'+teamrepo+'/issues/comments?page='+str(page)
       doNext = dumpComments(comments_url, comments, token)
