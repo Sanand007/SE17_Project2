@@ -70,7 +70,7 @@ def anonymize_teams(team_dict, team):
 	
  
 def dump1(u,issues):
-  token = "Insert Token Here" # <===
+  token = "3396ba7869f46704c99aba81d04726fdee53127b"
   user_dict = {}
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
   v = urllib.request.urlopen(request).read()
@@ -119,12 +119,12 @@ def dumpMilestone1(u,milestones):
     return dumpMilestone2(u, milestones)
   except urllib.request.HTTPError as e:
     if e.code == 404:
-    return False
+      return False
 	
 	
 def dumpMilestone2(u, milestones):
   # Source refered - https://github.com/CSC510-2015-Axitron/project2/blob/master/gitable-sql.py
-  token = "Insert Token Here"
+  token = "3396ba7869f46704c99aba81d04726fdee53127b"
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
   v = urllib.request.urlopen(request).read()
   milestone = json.loads(v)
@@ -142,6 +142,29 @@ def dumpMilestone2(u, milestones):
                closed_at = closed_at)
   milestones[id] = milestoneObj
   return True
+
+def dumpComments(url, comments, token):
+  try:
+    user_dict = {}
+    request = urllib.request.Request(url, headers={"Authorization" : "token "+token})
+    v = urllib.request.urlopen(request).read()
+    w = json.loads(v)
+    if not w:
+      return False
+    for comment in w:
+      user = anonymize_user(user_dict, comment['user']['login'])
+      commentObj = L(ident = comment['id'],
+                  issue = int((comment['issue_url'].split('/'))[-1]), 
+                  user = user,
+                  created_at = secs(comment['created_at']),
+                  updated_at = secs(comment['updated_at']))
+      comments.append(commentObj)
+      print("comment id = "+str(comment['id']))
+    return True
+  except Exception as e:
+    print(url)
+    print(e)
+    return False
 
 def launchDump():
   team_id = 0
@@ -166,7 +189,7 @@ def launchDump():
       doNext = dump('https://api.github.com/repos/'+teamrepo+'/issues/events?page=' + str(page), issues)
       page += 1
       if not doNext : break
-	
+
     with open('team'+str(team_id)+'.csv', 'w') as file: 
       w = csv.writer(file)
       w.writerow(["issue_id", "when", "action", "what", "user", "milestone", "Due"])
@@ -181,6 +204,22 @@ def launchDump():
       for key in milestone_dict.keys():
         milestone = milestone_dict[key]
         w.writerow([milestone.id, milestone.title, milestone.created_at, milestone.due_at, milestone.closed_at])
+
+    page = 1
+    comments = []
+    token = "3396ba7869f46704c99aba81d04726fdee53127b"
+    while(True):
+      comments_url = 'https://api.github.com/repos/'+teamrepo+'/issues/comments?page='+str(page)
+      doNext = dumpComments(comments_url, comments, token)
+      print("comments page "+str(page))
+      page += 1
+      if not doNext: break
+
+    with open('comments'+str(team_id)+'.csv', 'w') as file:
+      w = csv.writer(file)
+      w.writerow(["comment_id", "issue_id", "user_id", "created_at", "updated_at"])
+      for comment in comments:
+        w.writerow([comment.ident, comment.issue, comment.user, comment.created_at, comment.updated_at])
 	
 launchDump()
 
