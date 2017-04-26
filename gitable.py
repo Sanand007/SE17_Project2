@@ -24,6 +24,8 @@ Copy the value for that key and paste it on line marked "token" in the attached 
      python gitable.py
 
 """
+
+# Source refered - https://github.com/CSC510-2015-Axitron/project2/blob/master/gitable-sql.py
  
 from __future__ import print_function
 import urllib.request
@@ -69,9 +71,7 @@ def anonymize_teams(team_dict, team):
   return team_dict[team]
 	
  
-def dump1(u,issues):
-  token = "Insert Token Here"
-  user_dict = {}
+def dumpIssues2(u,issues, users):
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
   v = urllib.request.urlopen(request).read()
   w = json.loads(v)
@@ -83,7 +83,7 @@ def dump1(u,issues):
     action = event['event']
     label_name = 'no label'
     if event.get('label'): label_name = event['label']['name']
-    user = anonymize_user(user_dict, event['actor']['login'])
+    user = anonymize_user(users, event['actor']['login'])
     milestone = event['issue']['milestone']
     if milestone != None : milestone = milestone['title']
     eventObj = L(when=created_at,
@@ -97,18 +97,25 @@ def dump1(u,issues):
     issues[issue_id] = all_events
   return True
 
-def dump(u,issues):
+def dumpIssues1(u,issues, users):
   try:
-    return dump1(u, issues)
+    return dumpIssues2(u, issues, users)
   except Exception as e: 
     print(e)
     print("Contact TA")
     return False
 	
-def dumpMilestone(reponame, milestone_dict):
+def dumpIssues(repo,issues,users):
   page = 1
   while(True):
-    url = 'https://api.github.com/repos/'+reponame+'/milestones/' + str(page)
+    doNext = dumpIssues1('https://api.github.com/repos/'+repo+'/issues/events?page=' + str(page), issues, users)
+    page += 1
+    if not doNext : break
+	
+def dumpMilestone(repo, milestone_dict):
+  page = 1
+  while(True):
+    url = 'https://api.github.com/repos/'+repo+'/milestones/' + str(page)
     print ("milestone page:"+url)
     doNext = dumpMilestone1(url, milestone_dict)
     page += 1
@@ -123,8 +130,6 @@ def dumpMilestone1(u,milestones):
 	
 	
 def dumpMilestone2(u, milestones):
-  # Source refered - https://github.com/CSC510-2015-Axitron/project2/blob/master/gitable-sql.py
-  token = "Insert Token Here"
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
   v = urllib.request.urlopen(request).read()
   milestone = json.loads(v)
@@ -142,17 +147,25 @@ def dumpMilestone2(u, milestones):
                closed_at = closed_at)
   milestones[id] = milestoneObj
   return True
+  
+def dumpComments(repo, comments,users):
+  page = 1
+  while(True):
+    comments_url = 'https://api.github.com/repos/'+repo+'/issues/comments?page='+str(page)
+    doNext = dumpComments1(comments_url, comments, token, users)
+    print("comments page "+str(page))
+    page += 1
+    if not doNext: break
 
-def dumpComments(url, comments, token):
+def dumpComments1(url, comments, token, users):
   try:
-    user_dict = {}
     request = urllib.request.Request(url, headers={"Authorization" : "token "+token})
     v = urllib.request.urlopen(request).read()
     w = json.loads(v)
     if not w:
       return False
     for comment in w:
-      user = anonymize_user(user_dict, comment['user']['login'])
+      user = anonymize_user(users, comment['user']['login'])
       commentObj = L(ident = comment['id'],
                   issue = int((comment['issue_url'].split('/'))[-1]), 
                   user = user,
@@ -180,24 +193,23 @@ def launchDump():
 			'NCSU-SE-Spring-17/SE-17-S'
 			]
   random.shuffle(team_list)
-  for teamrepo in team_list:
+  
+  for repo in team_list:
     team_id = team_id + 1
     issues = dict()
     milestone_dict = dict()
-    page = 1
-    while(True):
-      doNext = dump('https://api.github.com/repos/'+teamrepo+'/issues/events?page=' + str(page), issues)
-      page += 1
-      if not doNext : break
-
+    comments = []
+    users = dict()
+    
+    dumpIssues(repo,issues,users)
     with open('team'+str(team_id)+'.csv', 'w') as file: 
       w = csv.writer(file)
-      w.writerow(["issue_id", "when", "action", "what", "user", "milestone", "Due"])
+      w.writerow(["issue_id", "when", "action", "what", "user", "milestone"])
       for issue in sorted(issues.keys()):
           events = issues[issue]
           for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone])
-    dumpMilestone(teamrepo,milestone_dict)
-	
+    
+    dumpMilestone(repo,milestone_dict)
     with open('milestone'+str(team_id)+'.csv', 'w') as file: 
       w = csv.writer(file)
       w.writerow(["milestone_id", "milestone_title", "created_at", "due_at", "closed_at"])
@@ -205,22 +217,16 @@ def launchDump():
         milestone = milestone_dict[key]
         w.writerow([milestone.id, milestone.title, milestone.created_at, milestone.due_at, milestone.closed_at])
 
-    page = 1
-    comments = []
-    token = "Insert Token Here"
-    while(True):
-      comments_url = 'https://api.github.com/repos/'+teamrepo+'/issues/comments?page='+str(page)
-      doNext = dumpComments(comments_url, comments, token)
-      print("comments page "+str(page))
-      page += 1
-      if not doNext: break
 
+    dumpComments(repo,comments,users)
     with open('comments'+str(team_id)+'.csv', 'w') as file:
       w = csv.writer(file)
       w.writerow(["comment_id", "issue_id", "user_id", "created_at", "updated_at"])
       for comment in comments:
         w.writerow([comment.ident, comment.issue, comment.user, comment.created_at, comment.updated_at])
-	
+
+		
+token = "Insert Token Here"
 launchDump()
 
 
