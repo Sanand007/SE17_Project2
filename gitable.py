@@ -114,12 +114,11 @@ def dumpIssues(repo,issues,users):
 	
 def dumpMilestone(repo, milestone_dict):
   page = 1
-  while(True):
+  while(page<20):
     url = 'https://api.github.com/repos/'+repo+'/milestones/' + str(page)
     print ("milestone page:"+url)
     doNext = dumpMilestone1(url, milestone_dict)
     page += 1
-    if not doNext : break
 
 def dumpMilestone1(u,milestones):
   try:
