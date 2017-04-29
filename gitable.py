@@ -178,7 +178,7 @@ def dumpComments1(url, comments, token, users):
     print(e)
     return False
 
-def dumpCommits(repo, commits)
+def dumpCommits(repo, commits):
   page = 1
   while(True):
     url = 'https://api.github.com/repos/'+repo+'/commits?page=' + str(page)
@@ -194,7 +194,7 @@ def dumpCommit1(u,commits,token):
   if not w: 
     return False
   for commit in w:
-    user = commit['author']['login']
+    user = anonymize_user(users, event['actor']['login'])
     sha = commit['sha']
     time = secs(commit['commit']['author']['date'])
     message = commit['commit']['message']
@@ -252,14 +252,14 @@ def launchDump():
       for comment in comments:
         w.writerow([comment.ident, comment.issue, comment.user, comment.created_at, comment.updated_at])
 
-		dumpCommits(repo, commits)
+    dumpCommits(repo, commits)
     with open('commits'+str(team_id)+'.csv', 'w') as file:
       w = csv.writer(file)
       w.writerow(["sha" "user_id", "time", "message"])
       for commit in commits:
         w.writerow([commit.sha, commit.user, commit.time, commit.message])
 
-token = "Insert Token Here"
+token = "605ca36d15801a0ae69c74e634094b28d136e843"
 launchDump()
 
 
