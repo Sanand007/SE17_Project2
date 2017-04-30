@@ -171,35 +171,32 @@ def dumpComments1(url, comments, token, users):
                   created_at = secs(comment['created_at']),
                   updated_at = secs(comment['updated_at']))
       comments.append(commentObj)
-      print("comment id = "+str(comment['id']))
     return True
   except Exception as e:
     print(url)
     print(e)
     return False
 
-def dumpCommits(repo, commits):
+def dumpCommits(repo, commits,users):
   page = 1
   while(True):
     url = 'https://api.github.com/repos/'+repo+'/commits?page=' + str(page)
-    doNext = dumpCommit1(url, commits, token)
+    doNext = dumpCommit1(url, commits, token,users)
     print("commit page "+ str(page))
     page += 1
     if not doNext : break
 
-def dumpCommit1(u,commits,token):
+def dumpCommit1(u,commits,token,users):
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
   v = urllib.request.urlopen(request).read()
   w = json.loads(v)
   if not w: 
     return False
   for commit in w:
-    user = anonymize_user(users, event['actor']['login'])
-    sha = commit['sha']
+    user = anonymize_user(users, commit['commit']['author']['name'])
     time = secs(commit['commit']['author']['date'])
     message = commit['commit']['message']
-    commitObj = L(sha = sha,
-                user = user,
+    commitObj = L(user = user,
                 time = time,
                 message = message)
     commits.append(commitObj)
@@ -218,7 +215,7 @@ def launchDump():
 			'SidHeg/se17-teamD', 
 			'NCSU-SE-Spring-17/SE-17-S'
 			]
-  random.shuffle(team_list)
+  #random.shuffle(team_list)
   
   for repo in team_list:
     team_id = team_id + 1
@@ -251,20 +248,13 @@ def launchDump():
       w.writerow(["comment_id", "issue_id", "user_id", "created_at", "updated_at"])
       for comment in comments:
         w.writerow([comment.ident, comment.issue, comment.user, comment.created_at, comment.updated_at])
-
-    dumpCommits(repo, commits)
+    
+    dumpCommits(repo, commits, users)
     with open('commits'+str(team_id)+'.csv', 'w') as file:
       w = csv.writer(file)
-      w.writerow(["sha" "user_id", "time", "message"])
+      w.writerow(["user_id", "time", "message"])
       for commit in commits:
-        w.writerow([commit.sha, commit.user, commit.time, commit.message])
+        w.writerow([commit.user, commit.time, commit.message])
 
-token = "605ca36d15801a0ae69c74e634094b28d136e843"
+token = "Insert Token"
 launchDump()
-
-
-
-
-  
-   
- 
