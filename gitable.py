@@ -73,6 +73,7 @@ def anonymize_teams(team_dict, team):
  
 def dumpIssues2(u,issues, users):
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
+  print('URL:',u)
   v = urllib.request.urlopen(request).read()
   w = json.loads(v)
   if not w: return False
@@ -82,6 +83,8 @@ def dumpIssues2(u,issues, users):
     created_at = secs(event['created_at'])
     action = event['event']
     label_name = 'no label'
+    opened_at = secs(event['issue']['created_at'])
+    closed_at = secs(event['issue']['closed_at'])
     if event.get('label'): label_name = event['label']['name']
     user = anonymize_user(users, event['actor']['login'])
     milestone = event['issue']['milestone']
@@ -90,7 +93,9 @@ def dumpIssues2(u,issues, users):
                  action = action,
                  what = label_name,
                  user = user,
-                 milestone = milestone)
+                 milestone = milestone,
+                 opened_at = opened_at,
+                 closed_at = closed_at)
     all_events = issues.get(issue_id)
     if not all_events: all_events = []
     all_events.append(eventObj)
@@ -228,12 +233,12 @@ def launchDump():
     dumpIssues(repo,issues,users)
     with open('team'+str(team_id)+'.csv', 'w') as file: 
       w = csv.writer(file)
-      w.writerow(["issue_id", "when", "action", "what", "user", "milestone"])
+      w.writerow(["issue_id", "when", "action", "what", "user", "milestone", "opened_at", "closed_at"])
       for issue in sorted(issues.keys()):
           events = issues[issue]
-          for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone])
+          for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone, event.opened_at, event.closed_at])
     
-    dumpMilestone(repo,milestone_dict)
+    '''dumpMilestone(repo,milestone_dict)
     with open('milestone'+str(team_id)+'.csv', 'w') as file: 
       w = csv.writer(file)
       w.writerow(["milestone_id", "milestone_title", "created_at", "due_at", "closed_at"])
@@ -254,7 +259,7 @@ def launchDump():
       w = csv.writer(file)
       w.writerow(["user_id", "time", "message"])
       for commit in commits:
-        w.writerow([commit.user, commit.time, commit.message])
+        w.writerow([commit.user, commit.time, commit.message])'''
 
 token = "Insert Token"
 launchDump()
