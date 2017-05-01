@@ -78,6 +78,8 @@ def dumpIssues2(u,issues, users):
   w = json.loads(v)
   if not w: return False
   for event in w:
+    if(event['actor']['login'] in ['timm','effat']):
+       break
     issue_id = event['issue']['number']
     # if not event.get('label'): continue
     created_at = secs(event['created_at'])
@@ -169,6 +171,8 @@ def dumpComments1(url, comments, token, users):
     if not w:
       return False
     for comment in w:
+      if(comment['user']['login'] in ['timm','effat']):
+       break
       user = anonymize_user(users, comment['user']['login'])
       commentObj = L(ident = comment['id'],
                   issue = int((comment['issue_url'].split('/'))[-1]), 
@@ -230,7 +234,7 @@ def launchDump():
     users = dict()
     commits = []
 
-    dumpIssues(repo,issues,users)
+    '''dumpIssues(repo,issues,users)
     with open('team'+str(team_id)+'.csv', 'w') as file: 
       w = csv.writer(file)
       w.writerow(["issue_id", "when", "action", "what", "user", "milestone", "opened_at", "closed_at"])
@@ -238,13 +242,13 @@ def launchDump():
           events = issues[issue]
           for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone, event.opened_at, event.closed_at])
     
-    '''dumpMilestone(repo,milestone_dict)
+    dumpMilestone(repo,milestone_dict)
     with open('milestone'+str(team_id)+'.csv', 'w') as file: 
       w = csv.writer(file)
       w.writerow(["milestone_id", "milestone_title", "created_at", "due_at", "closed_at"])
       for key in milestone_dict.keys():
         milestone = milestone_dict[key]
-        w.writerow([milestone.id, milestone.title, milestone.created_at, milestone.due_at, milestone.closed_at])
+        w.writerow([milestone.id, milestone.title, milestone.created_at, milestone.due_at, milestone.closed_at])'''
 
 
     dumpComments(repo,comments,users)
@@ -254,7 +258,7 @@ def launchDump():
       for comment in comments:
         w.writerow([comment.ident, comment.issue, comment.user, comment.created_at, comment.updated_at])
     
-    dumpCommits(repo, commits, users)
+    '''dumpCommits(repo, commits, users)
     with open('commits'+str(team_id)+'.csv', 'w') as file:
       w = csv.writer(file)
       w.writerow(["user_id", "time", "message"])
