@@ -73,15 +73,20 @@ def anonymize_teams(team_dict, team):
  
 def dumpIssues2(u,issues, users):
   request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
+  print('URL:',u)
   v = urllib.request.urlopen(request).read()
   w = json.loads(v)
   if not w: return False
   for event in w:
+    if(event['actor']['login'] in ['timm','effat']):
+       break
     issue_id = event['issue']['number']
     # if not event.get('label'): continue
     created_at = secs(event['created_at'])
     action = event['event']
     label_name = 'no label'
+    opened_at = secs(event['issue']['created_at'])
+    closed_at = secs(event['issue']['closed_at'])
     if event.get('label'): label_name = event['label']['name']
     user = anonymize_user(users, event['actor']['login'])
     milestone = event['issue']['milestone']
@@ -90,7 +95,9 @@ def dumpIssues2(u,issues, users):
                  action = action,
                  what = label_name,
                  user = user,
-                 milestone = milestone)
+                 milestone = milestone,
+                 opened_at = opened_at,
+                 closed_at = closed_at)
     all_events = issues.get(issue_id)
     if not all_events: all_events = []
     all_events.append(eventObj)
@@ -164,6 +171,8 @@ def dumpComments1(url, comments, token, users):
     if not w:
       return False
     for comment in w:
+      if(comment['user']['login'] in ['timm','effat']):
+       break
       user = anonymize_user(users, comment['user']['login'])
       commentObj = L(ident = comment['id'],
                   issue = int((comment['issue_url'].split('/'))[-1]), 
@@ -171,12 +180,36 @@ def dumpComments1(url, comments, token, users):
                   created_at = secs(comment['created_at']),
                   updated_at = secs(comment['updated_at']))
       comments.append(commentObj)
-      print("comment id = "+str(comment['id']))
     return True
   except Exception as e:
     print(url)
     print(e)
     return False
+
+def dumpCommits(repo, commits,users):
+  page = 1
+  while(True):
+    url = 'https://api.github.com/repos/'+repo+'/commits?page=' + str(page)
+    doNext = dumpCommit1(url, commits, token,users)
+    print("commit page "+ str(page))
+    page += 1
+    if not doNext : break
+
+def dumpCommit1(u,commits,token,users):
+  request = urllib.request.Request(u, headers={"Authorization" : "token "+token})
+  v = urllib.request.urlopen(request).read()
+  w = json.loads(v)
+  if not w: 
+    return False
+  for commit in w:
+    user = anonymize_user(users, commit['commit']['author']['name'])
+    time = secs(commit['commit']['author']['date'])
+    message = commit['commit']['message']
+    commitObj = L(user = user,
+                time = time,
+                message = message)
+    commits.append(commitObj)
+  return True
 
 def launchDump():
   team_id = 0
@@ -191,7 +224,7 @@ def launchDump():
 			'SidHeg/se17-teamD', 
 			'NCSU-SE-Spring-17/SE-17-S'
 			]
-  random.shuffle(team_list)
+  #random.shuffle(team_list)
   
   for repo in team_list:
     team_id = team_id + 1
@@ -199,14 +232,15 @@ def launchDump():
     milestone_dict = dict()
     comments = []
     users = dict()
-    
-    dumpIssues(repo,issues,users)
+    commits = []
+
+    '''dumpIssues(repo,issues,users)
     with open('team'+str(team_id)+'.csv', 'w') as file: 
       w = csv.writer(file)
-      w.writerow(["issue_id", "when", "action", "what", "user", "milestone"])
+      w.writerow(["issue_id", "when", "action", "what", "user", "milestone", "opened_at", "closed_at"])
       for issue in sorted(issues.keys()):
           events = issues[issue]
-          for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone])
+          for event in events: w.writerow([issue, event.when, event.action, event.what, event.user, event.milestone, event.opened_at, event.closed_at])
     
     dumpMilestone(repo,milestone_dict)
     with open('milestone'+str(team_id)+'.csv', 'w') as file: 
@@ -214,7 +248,7 @@ def launchDump():
       w.writerow(["milestone_id", "milestone_title", "created_at", "due_at", "closed_at"])
       for key in milestone_dict.keys():
         milestone = milestone_dict[key]
-        w.writerow([milestone.id, milestone.title, milestone.created_at, milestone.due_at, milestone.closed_at])
+        w.writerow([milestone.id, milestone.title, milestone.created_at, milestone.due_at, milestone.closed_at])'''
 
 
     dumpComments(repo,comments,users)
@@ -223,14 +257,13 @@ def launchDump():
       w.writerow(["comment_id", "issue_id", "user_id", "created_at", "updated_at"])
       for comment in comments:
         w.writerow([comment.ident, comment.issue, comment.user, comment.created_at, comment.updated_at])
+    
+    '''dumpCommits(repo, commits, users)
+    with open('commits'+str(team_id)+'.csv', 'w') as file:
+      w = csv.writer(file)
+      w.writerow(["user_id", "time", "message"])
+      for commit in commits:
+        w.writerow([commit.user, commit.time, commit.message])'''
 
-		
-token = "Insert Token Here"
+token = "Insert Token"
 launchDump()
-
-
-
-
-  
-   
- 
